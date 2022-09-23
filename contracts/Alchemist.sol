@@ -51,30 +51,15 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         _setupRole(ROYALTY_ORACLE_ROLE, timelockController);
     }
 
-    /**
-     * @dev Returns the cap on the token's total supply.
-     */
     function cap() public pure returns (uint256) {
         return _cap;
     }
-
-    /**
-     * @dev Pause the contract.
-     */
     function pause() external whenNotPaused onlyOwner {
         _pause();
     }
-
-    /**
-     * @dev Unpause the contract.
-     */
     function unpause() external whenPaused onlyOwner {
         _unpause();
     }
-
-    /**
-     * @dev Returns the token URI.
-     */
     function tokenURI(uint256 tokenId) override public view returns (string memory) {
         require(tokenId >= 1000 && tokenId < next_id.current(), "ID is invalid");
         ItokenURIEngine tokenURIEngine_ = tokenURIEngine();
@@ -83,10 +68,6 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         string memory output = string(abi.encodePacked('data:application/json;base64,', json));
         return output;
     }
-
-    /**
-     * @dev Community Alchemist Mint.
-     */
     function mint() external nonReentrant {
         AlchemistOf memory alchemist = _alchemists[msg.sender];
         require(alchemist.allow > alchemist.minted, "You are not allowed to mint");
@@ -98,9 +79,6 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         next_id.increment();
     }
 
-    /**
-     * @dev A better way to distribute rewards is waiting to be opened.
-     */
     function mintByContract(address owner_) external nonReentrant {
         require(hasRole(ALCHEMIST_CONTRACT_ROLE, msg.sender) && msg.sender.isContract(), "No permission");
         uint256 id = next_id.current();
@@ -110,17 +88,15 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         next_id.increment();
     }
 
-    /// @dev set tokenURIEngine's address.
+    /* settings */
     function setTokenURIEngine(address tokenURIEngine__) external nonReentrant {
         require(hasRole(TOKENURI_ENGINE_ROLE, msg.sender), "No permission");
         _setTokenURIEngine(tokenURIEngine__);
     }
-    /// @dev Set royaltyOracle's address.
     function setRoyaltyOracle(address royaltyOracle_) external nonReentrant {
         require(hasRole(ROYALTY_ORACLE_ROLE, msg.sender), "No permission");
         _setRoyaltyOracle(royaltyOracle_);
     }
-    /// @dev Share community rewards.
     function setAlchemist(address owner_, uint8 allow_) external {
         require(hasRole(ALCHEMIST_ROLE, msg.sender), "No permission");
         require(owner_ != address(0), "Alchemist address is invalid");
@@ -129,7 +105,6 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         _alchemists[owner_] = AlchemistOf(allow_, 0);
         emit CallSetAlchemist(owner_, allow_);
     }
-    /// @dev minted of alchemist.
     function ownerOfMinted(address owner_) external view returns(uint8) {
         return _alchemists[owner_].minted;
     }
@@ -137,12 +112,7 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
         return super.supportsInterface(interfaceId);
     }
 
-    /// @dev Royalty payments required prior to transfer.
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
         require(!paused(), "ERC721Pausable: token transfer while paused");
         super._beforeTokenTransfer(from, to, tokenId);
         compute(from, to, tokenId);
