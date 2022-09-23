@@ -47,15 +47,7 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
 
     using StringLib for string;
     using SafeERC20 for IERC20;
-    constructor(
-        NNS nns_,
-        address timelockController,
-        address erc20TransferHelper_,
-        ITreasury micTreasury_,
-        ITreasury midLandTreasury_,
-        ITreasury alchemistTreasury_,
-        ITreasury fundTreasury_,
-        address _vrfCoordinator) VRFConsumerBaseV2(_vrfCoordinator) BaseRegistrarImplementation("MetaID", "MID", nns_) Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_) {
+    constructor(NNS nns_, address timelockController, address erc20TransferHelper_, ITreasury micTreasury_, ITreasury midLandTreasury_, ITreasury alchemistTreasury_, ITreasury fundTreasury_, address _vrfCoordinator) VRFConsumerBaseV2(_vrfCoordinator) BaseRegistrarImplementation("MetaID", "MID", nns_) Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_) {
         _setRoleAdmin(META_ID_ADMIN, META_ID_ADMIN);
         require(timelockController != address(0), "Timelock controller address is invalid");
         _setRoleAdmin(TOKENURI_ENGINE_ROLE, META_ID_ADMIN);
@@ -70,21 +62,13 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
 
         vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
     }
-
-    /**
-     * @dev Initializes the contract with the given parameters.
-     */
     function init(address micAddress_, address landAddress_, IERC20 usdc_) external initializer {
         _landAddress = landAddress_;
         _micToken =  IMIC(micAddress_);
         _usdc = usdc_;
     }
 
-    function setVRF(
-        bytes32 _keyHash,
-        uint64 _subscriptionId,
-        uint32 _callbackGasLimit,
-        uint16 _requestConfirmations) external nonReentrant {
+    function setVRF(bytes32 _keyHash, uint64 _subscriptionId, uint32 _callbackGasLimit, uint16 _requestConfirmations) external nonReentrant {
         require(hasRole(VRF_ROLE, msg.sender), "No permission");
 
         keyHash = _keyHash;
@@ -92,29 +76,16 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
         callbackGasLimit = _callbackGasLimit;
         requestConfirmations = _requestConfirmations;
     }
-
-    /**
-     * @dev Returns current token price.
-     */
     function priceOracle(uint256 count) public pure returns(uint256) {
         uint256 epoch = count / 1000;
         return 2 * 10 ** 8 * 105 ** epoch / 100 ** epoch;
     }
-
-    /**
-     * @dev Pause the contract.
-     */
     function pause() external whenNotPaused onlyOwner {
         _pause();
     }
-
-    /**
-     * @dev Unpause the contract.
-     */
     function unpause() external whenPaused onlyOwner {
         _unpause();
     }
-
     function tokenURI(uint256 tokenId) override public view returns (string memory) {
         require(_exists(tokenId), "id does not exist");
         string memory name = getNameOfTokenId(tokenId);
@@ -124,17 +95,9 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
         string memory output = string(abi.encodePacked('data:application/json;base64,', json));
         return output;
     }
-
-    /**
-     * @dev Current mint price of the token.
-     */
     function currentPrice() public view returns (uint256) {
         return priceOracle(totalSupply());
     }
-
-    /**
-     * @dev Mint *.mid in mid.land .
-     */
     function mintMid(string memory name) nonReentrant external {
         require(mintedOfMid() < _midTotalSupply, "Mid has been completed");
         (, bytes32 rootName) = name.nameSplit();
@@ -160,7 +123,7 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
 
         _nameOfTokenId[tokenId] = Byte.stringToBytes32(name);
         _tokenIdOfName[Byte.stringToBytes32(name)] = tokenId;
-        
+
         _safeMint(owner_, tokenId);
         _register(parentsNode,  namePrefix, address(this));
 
@@ -177,37 +140,23 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
         requestRandomToTokenId[requestId] = tokenId;
         _properties[tokenId].birthblock = block.number;
     }
-
     function _landTokenId(bytes32 label) internal pure returns (uint256) {
         bytes32 parentsNode = keccak256(abi.encodePacked(ROOT_NODE, keccak256(bytes("land"))));
         bytes32 subNode = keccak256(abi.encodePacked(parentsNode, label));
         uint256 _tokenId = uint256(subNode);
         return _tokenId;
     }
-
-    /**
-     * @dev Return count of *.mid have been minted.
-     */
     function mintedOfMid() public view returns (uint256) {
         return ILand(_landAddress).countOfMembers(94328775775500535888815848536672232909525637833506754693101418770997277966841);
     }
-    /**
-     * @dev Returns the propery of the token.
-     */
     function getProperty(uint256 tokenId) external view returns (Properties memory) {
         require(_exists(tokenId), "Name is not registered");
         return _properties[tokenId];
     }
-    /**
-     * @dev Returns the token uri of the given name.
-     */
     function  tokenURIByName(string memory name_) external view returns (string memory) {
         uint256 tokenId = getTokenIdOfName(name_);
         return tokenURI(tokenId);
     }
-
-
-
     function rarity(uint256 seed) internal pure returns (bytes3 ratiryVal) {
         uint256 rarityRand = seed % 100;
         if (rarityRand <= 59) {
@@ -223,12 +172,11 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
         }
     }
 
-    /// @dev set tokenURIEngine's address.
+    /* settings */
     function setTokenURIEngine(address tokenURIEngine__) external nonReentrant {
         require(hasRole(TOKENURI_ENGINE_ROLE, msg.sender), "No permission");
         _setTokenURIEngine(tokenURIEngine__);
     }
-    /// @dev Set royaltyOracle's address.
     function setRoyaltyOracle(address royaltyOracle_) external nonReentrant {
         require(hasRole(ROYALTY_ORACLE_ROLE, msg.sender), "No permission");
         _setRoyaltyOracle(royaltyOracle_);
@@ -236,21 +184,11 @@ contract Mid is VRFConsumerBaseV2, Royalty, AccessControl, BaseRegistrarImplemen
     function supportsInterface(bytes4 interfaceId) public view override(BaseRegistrarImplementation, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomNumbers)
-        internal
-        override
-    {
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomNumbers) internal override {
         _properties[requestRandomToTokenId[requestId]].seed = randomNumbers[0];
         _properties[requestRandomToTokenId[requestId]].rarity = rarity(randomNumbers[0]);
     }
-
-    /// @dev Royalty payments required prior to transfer
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
         require(!paused(), "ERC721Pausable: token transfer while paused");
         super._beforeTokenTransfer(from, to, tokenId);
         compute(from, to, tokenId);

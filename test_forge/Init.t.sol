@@ -50,7 +50,7 @@ abstract contract InitTest is Test, ERC721Holder, ERC1155Holder {
         proposersUser[0] = address(this);
         metaTimelockController = new MetaTimelockController(1, proposersUser, proposersUser);
         treasuryTimelockController = new TreasuryTimelockController(1, proposersUser, proposersUser);
-        
+
         micTreasury = new MicTreasury(address(weth),
         address(treasuryTimelockController));
         midLandTreasury = new MidLandTreasury(address(weth),
@@ -80,7 +80,7 @@ abstract contract InitTest is Test, ERC721Holder, ERC1155Holder {
         address(vrfCoordinator)
         );
         vrfCoordinator.addConsumer(subId, address(mid));
-        
+
         mic = new Mic(address(mid));
 
         land = new Land(
