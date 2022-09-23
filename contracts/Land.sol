@@ -24,15 +24,7 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
 
     event CallUpdateMember(uint256 indexed tokenIdOfLand, uint256 indexed tokenIdOfMid );
 
-    constructor(
-        NNS nns_,
-        address timelockController,
-        address erc20TransferHelper_,
-        ITreasury micTreasury_,
-        ITreasury midLandTreasury_,
-        ITreasury alchemistTreasury_,
-        address micAddress_,
-        address midAddress_) BaseRegistrarImplementation("Land", "LAND", nns_) Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_){
+    constructor(NNS nns_, address timelockController, address erc20TransferHelper_, ITreasury micTreasury_, ITreasury midLandTreasury_, ITreasury alchemistTreasury_, address micAddress_, address midAddress_) BaseRegistrarImplementation("Land", "LAND", nns_) Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_){
         _setRoleAdmin(LAND_ADMIN, LAND_ADMIN);
         require(timelockController != address(0), "Timelock controller address is invalid");
         _setRoleAdmin(TOKENURI_ENGINE_ROLE, LAND_ADMIN);
@@ -45,9 +37,6 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
         _MIDCoin = IERC20(micAddress_);
     }
 
-    /**
-     * @dev Returns current token price.
-     */
     function priceOracle(uint256 count) internal pure returns(uint256) {
         if (count == 0) {
             return 0;
@@ -55,28 +44,15 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
         uint256 epoch = (count - 1) / 1000;
         return 500 ether + epoch * 10 ether;
     }
-
-    /**
-     * @dev Returns the mid token address.
-     */
     function midAddress() external view returns (address) {
         return _midAddress;
     }
-
-    /**
-     * @dev Pause the contract.
-     */
     function pause() external whenNotPaused onlyOwner {
         _pause();
     }
-
-    /**
-     * @dev Unpause the contract.
-     */
     function unpause() external whenPaused onlyOwner {
         _unpause();
     }
-
     function tokenURI(uint256 tokenId) override public view returns (string memory) {
         require(_exists(tokenId), "id does not exist");
         string memory name = getNameOfTokenId(tokenId);
@@ -86,7 +62,6 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
         string memory output = string(abi.encodePacked('data:application/json;base64,', json));
         return output;
     }
-
     function mint(string memory name_) external nonReentrant {
         uint256 _currentPrice = currentPrice();
         (bytes32 name, bytes32 rootName) = name_.nameSplit();
@@ -99,7 +74,7 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
         _tokenIdOfName[ Byte.stringToBytes32(name_)] = tokenId;
         _safeMint(msg.sender, tokenId);
         _register(parentsNode,  name, address(this));
-        
+
         bytes32 subParentsNode = keccak256(abi.encodePacked(ROOT_NODE, name));
         require(nns.ownerOf(subParentsNode) == address(0x0), "Land has been registered");
         require(_midAddress != address(0x0), "MID is not initialized");
@@ -114,63 +89,39 @@ contract Land is Royalty, AccessControl, BaseRegistrarImplementation, Pausable, 
             _MIDCoin.safeTransfer(_alchemistTreasury, _currentPrice*3/10);
         }
     }
-
-    /**
-     * @dev Returns the token uri of the given name.
-     */
     function  tokenURIByName(string memory name_) external view returns (string memory) {
         uint256 tokenId = getTokenIdOfName(name_);
         return tokenURI(tokenId);
     }
-    /**
-     * @dev Returns the price.
-     */
     function currentPrice() public view returns (uint256) {
         return priceOracle(totalSupply());
     }
-
     function updateMember(uint256 tokenIdOfLand, uint256 tokenIdOfMid) external nonReentrant {
         require(_exists(tokenIdOfLand), "land does not exist");
         require(msg.sender == _midAddress, "only mid owner can update member");
         _membersOfLand[tokenIdOfLand].push(tokenIdOfMid);
         emit CallUpdateMember(tokenIdOfLand, tokenIdOfMid);
     }
-
-    /**
-     * @dev Returns the member count of the given token id.
-     */
     function countOfMembers(uint256 tokenId) external view returns (uint256) {
         return _membersOfLand[tokenId].length;
     }
-
-    /**
-     * @dev Returns the members of the given token id.
-     */
     function members(uint256 tokenId) external view returns (uint256[] memory) {
         return _membersOfLand[tokenId];
     }
 
-    /// @dev set tokenURIEngine's address.
+    /* settings */
     function setTokenURIEngine(address tokenURIEngine__) external nonReentrant {
         require(hasRole(TOKENURI_ENGINE_ROLE, msg.sender), "No permission");
         _setTokenURIEngine(tokenURIEngine__);
     }
-
-    /// @dev Set royaltyOracle's address.
     function setRoyaltyOracle(address royaltyOracle_) external nonReentrant {
         require(hasRole(ROYALTY_ORACLE_ROLE, msg.sender), "No permission");
         _setRoyaltyOracle(royaltyOracle_);
     }
-
     function supportsInterface(bytes4 interfaceId) public view override(BaseRegistrarImplementation, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
         require(!paused(), "ERC721Pausable: token transfer while paused");
         super._beforeTokenTransfer(from, to, tokenId);
         compute(from, to, tokenId);
