@@ -34,12 +34,7 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
 
     event Minted(address indexed owner, uint256 indexed tokenId);
     event CallSetAlchemist(address alchemist, uint8 allow);
-    constructor(
-        address timelockController,
-        address erc20TransferHelper_,
-        ITreasury micTreasury_,
-        ITreasury midLandTreasury_,
-        ITreasury alchemistTreasury_) ERC721("Alchemist", "ALC") Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_) {
+    constructor(address timelockController, address erc20TransferHelper_, ITreasury micTreasury_, ITreasury midLandTreasury_, ITreasury alchemistTreasury_) ERC721("Alchemist", "ALC") Royalty(erc20TransferHelper_, micTreasury_, midLandTreasury_, alchemistTreasury_) {
         _setRoleAdmin(ALCHEMIST_ADMIN, ALCHEMIST_ADMIN);
         require(timelockController != address(0), "Timelock controller address is invalid");
         _setRoleAdmin(TOKENURI_ENGINE_ROLE, ALCHEMIST_ADMIN);
@@ -111,7 +106,6 @@ contract Alchemist is Royalty, AccessControl, ERC721Enumerable, Pausable, TokenU
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC721Enumerable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
     function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
         require(!paused(), "ERC721Pausable: token transfer while paused");
         super._beforeTokenTransfer(from, to, tokenId);
